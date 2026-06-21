@@ -1,0 +1,36 @@
+name: CI — Build, Test, Push
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-test-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ustaw Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Zainstaluj zależności i uruchom testy
+        run: |
+          pip install -r requirements.txt
+          pytest test_app.py -v
+
+      - name: Zaloguj się do ACR
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ secrets.ACR_LOGIN_SERVER }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Zbuduj i wypchnij obraz do ACR
+        run: |
+          IMAGE=${{ secrets.ACR_LOGIN_SERVER }}/app:${{ github.sha }}
+          docker build -t $IMAGE .
+          docker push $IMAGE
+          echo "Obraz wypchnięty: $IMAGE"
